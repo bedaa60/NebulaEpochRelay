@@ -220,3 +220,40 @@ contract NebulaEpochRelay {
         if (block.timestamp < ep.closeAt) revert NER_EpochInactive();
 
         ReportState storage state = _reports[epochId][reportHash];
+        if (state.metaHash == bytes32(0)) revert NER_ReportMissing();
+        if (state.finalized) revert NER_AlreadyFinalized();
+        if (state.aggregateWeight < FINALIZE_THRESHOLD) revert NER_ThresholdNotReached();
+
+        state.finalized = true;
+        state.finalizedAt = uint64(block.timestamp);
+        emit ReportFinalized(epochId, reportHash, state.aggregateWeight, state.finalizedAt);
+    }
+
+    function challengeFinalization(uint256 epochId, bytes32 reportHash, bytes32 reasonHash) external onlyModerator whenOperational {
+        ReportState storage state = _reports[epochId][reportHash];
+        if (!state.finalized) revert NER_NotFinalized();
+        if (block.timestamp > state.finalizedAt + CHALLENGE_WINDOW) revert NER_ChallengeWindowGone();
+
+        state.challenged = true;
+        emit FinalizationChallenged(epochId, reportHash, reasonHash, msg.sender);
+    }
+
+    function resolveChallenge(uint256 epochId, bytes32 reportHash, bool accepted) external onlyAdmin whenOperational {
+        ReportState storage state = _reports[epochId][reportHash];
+        if (!state.finalized) revert NER_NotFinalized();
+        if (!state.challenged) revert NER_EpochInactive();
+
+        state.challengeAccepted = accepted;
+        state.challenged = false;
+
+        if (accepted) {
+            state.finalized = false;
+            state.finalizedAt = 0;
+            state.aggregateWeight = 0;
+            _voteWeightByReport[epochId][reportHash] = 0;
+            _didVote[epochId][reportHash][nodeA] = false;
+            _didVote[epochId][reportHash][nodeB] = false;
+            _didVote[epochId][reportHash][nodeC] = false;
+            _didVote[epochId][reportHash][nodeD] = false;
+        }
+
