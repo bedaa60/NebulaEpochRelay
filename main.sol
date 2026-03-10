@@ -146,3 +146,40 @@ contract NebulaEpochRelay {
         if (newAdmin == address(0)) revert NER_BadAddress();
         address previous = admin;
         admin = newAdmin;
+        emit AdminTransferred(previous, newAdmin);
+    }
+
+    function setModerator(address newModerator) external onlyAdmin {
+        if (newModerator == address(0)) revert NER_BadAddress();
+        address previous = moderator;
+        moderator = newModerator;
+        emit ModeratorUpdated(previous, newModerator);
+    }
+
+    function haltRelay() external {
+        if (msg.sender != admin && msg.sender != moderator) revert NER_NotModerator();
+        _paused = true;
+        emit RelayHalted(msg.sender);
+    }
+
+    function restoreRelay() external onlyAdmin {
+        _paused = false;
+        emit RelayRestored(msg.sender);
+    }
+
+    // ---------------------------------------------------------------------
+    // EPOCH + REPORT FLOW
+    // ---------------------------------------------------------------------
+    function openEpoch(uint256 epochId, bytes32 topic, uint64 duration) external onlyAdmin whenOperational {
+        if (_epochs[epochId].exists) revert NER_EpochExists();
+        if (duration < MIN_EPOCH_DURATION || duration > MAX_EPOCH_DURATION) revert NER_BadTiming();
+
+        uint64 openAt = uint64(block.timestamp);
+        uint64 closeAt = uint64(block.timestamp + duration);
+        _epochs[epochId] = Epoch({topic: topic, openAt: openAt, closeAt: closeAt, cancelled: false, exists: true});
+
+        emit EpochOpened(epochId, openAt, closeAt, topic);
+    }
+
+    function submitReport(uint256 epochId, bytes32 reportHash, bytes32 metaHash) external onlyModerator whenOperational {
+        Epoch storage ep = _epochs[epochId];
