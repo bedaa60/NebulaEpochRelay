@@ -257,3 +257,40 @@ contract NebulaEpochRelay {
             _didVote[epochId][reportHash][nodeD] = false;
         }
 
+        emit ChallengeResolved(epochId, reportHash, accepted);
+    }
+
+    function cancelEpoch(uint256 epochId) external {
+        Epoch storage ep = _epochs[epochId];
+        if (!ep.exists) revert NER_EpochMissing();
+        if (msg.sender != admin && msg.sender != moderator) revert NER_NotModerator();
+
+        ep.cancelled = true;
+        emit EpochCancelled(epochId, msg.sender);
+    }
+
+    // ---------------------------------------------------------------------
+    // UTILITIES + VIEWS
+    // ---------------------------------------------------------------------
+    function paused() external view returns (bool) {
+        return _paused;
+    }
+
+    function committeeWeight(address account) public view returns (uint16) {
+        if (account == nodeA) return 300;
+        if (account == nodeB) return 280;
+        if (account == nodeC) return 220;
+        if (account == nodeD) return 200;
+        revert NER_NotCommittee();
+    }
+
+    function epochDigest(uint256 epochId) external view returns (bytes32) {
+        Epoch storage ep = _epochs[epochId];
+        if (!ep.exists) revert NER_EpochMissing();
+        return keccak256(abi.encode(RELAY_NAMESPACE, RELAY_SEED_A, RELAY_SEED_B, epochId, ep.topic, ep.openAt, ep.closeAt, ep.cancelled));
+    }
+
+    function epochData(uint256 epochId) external view returns (bytes32 topic, uint64 openAt, uint64 closeAt, bool cancelled, bool exists) {
+        Epoch storage ep = _epochs[epochId];
+        return (ep.topic, ep.openAt, ep.closeAt, ep.cancelled, ep.exists);
+    }
