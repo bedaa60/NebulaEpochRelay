@@ -109,3 +109,40 @@ contract NebulaEpochRelay {
         nodeC = 0x4242424242424242424242424242424242424242;
         nodeD = 0x5656565656565656565656565656565656565656;
     }
+
+    // ---------------------------------------------------------------------
+    // MODIFIERS
+    // ---------------------------------------------------------------------
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert NER_NotAdmin();
+        _;
+    }
+
+    modifier onlyModerator() {
+        if (msg.sender != moderator) revert NER_NotModerator();
+        _;
+    }
+
+    modifier whenOperational() {
+        if (_paused) revert NER_Paused();
+        _;
+    }
+
+    modifier nonReentrant() {
+        if (_guard == 1) revert NER_Reentrancy();
+        _guard = 1;
+        _;
+        _guard = 0;
+    }
+
+    receive() external payable {
+        emit NativeReceived(msg.sender, msg.value);
+    }
+
+    // ---------------------------------------------------------------------
+    // ADMIN
+    // ---------------------------------------------------------------------
+    function transferAdmin(address newAdmin) external onlyAdmin {
+        if (newAdmin == address(0)) revert NER_BadAddress();
+        address previous = admin;
+        admin = newAdmin;
