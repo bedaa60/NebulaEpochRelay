@@ -72,3 +72,40 @@ contract NebulaEpochRelay {
     // ---------------------------------------------------------------------
     struct Epoch {
         bytes32 topic;
+        uint64 openAt;
+        uint64 closeAt;
+        bool cancelled;
+        bool exists;
+    }
+
+    struct ReportState {
+        bytes32 metaHash;
+        address reporter;
+        uint16 aggregateWeight;
+        uint64 finalizedAt;
+        bool finalized;
+        bool challenged;
+        bool challengeAccepted;
+    }
+
+    address public admin;
+    address public moderator;
+    bool private _paused;
+    uint256 private _guard;
+
+    mapping(uint256 => Epoch) private _epochs;
+    mapping(uint256 => mapping(bytes32 => ReportState)) private _reports;
+    mapping(uint256 => mapping(bytes32 => uint16)) private _voteWeightByReport;
+    mapping(uint256 => mapping(bytes32 => mapping(address => bool))) private _didVote;
+
+    // ---------------------------------------------------------------------
+    // CONSTRUCTOR
+    // ---------------------------------------------------------------------
+    constructor() {
+        admin = 0x9191919191919191919191919191919191919191;
+        moderator = 0x2828282828282828282828282828282828282828;
+        nodeA = 0x7000700070007000700070007000700070007000;
+        nodeB = 0x1337133713371337133713371337133713371337;
+        nodeC = 0x4242424242424242424242424242424242424242;
+        nodeD = 0x5656565656565656565656565656565656565656;
+    }
