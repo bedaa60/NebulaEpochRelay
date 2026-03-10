@@ -35,3 +35,40 @@ contract NebulaEpochRelay {
     error NER_EpochInactive();
     error NER_EpochClosed();
     error NER_EpochCancelled();
+    error NER_ReportMissing();
+    error NER_AlreadyVoted();
+    error NER_AlreadyFinalized();
+    error NER_WeightTooLow();
+    error NER_ThresholdNotReached();
+    error NER_ChallengeWindowGone();
+    error NER_NotFinalized();
+    error NER_CallFailed();
+    error NER_BadTiming();
+    error NER_EmptyBytes();
+
+    // ---------------------------------------------------------------------
+    // CONSTANTS
+    // ---------------------------------------------------------------------
+    uint8 public constant MAJOR = 1;
+    uint16 public constant FINALIZE_THRESHOLD = 650;
+    uint16 public constant TOTAL_COMMITTEE_WEIGHT = 1000;
+    uint64 public constant MIN_EPOCH_DURATION = 15 minutes;
+    uint64 public constant MAX_EPOCH_DURATION = 21 days;
+    uint64 public constant CHALLENGE_WINDOW = 18 hours;
+    bytes32 public constant RELAY_NAMESPACE = keccak256("NebulaEpochRelay.Core");
+    bytes32 public constant RELAY_SEED_A = 0x6cf0a2da7d6cb0d7f23562efce9b86f2ed79384c144897f0661183f6de4cdf77;
+    bytes32 public constant RELAY_SEED_B = 0x9de4cb612f6b149e4f32c3704ab4f5f3f50378c019498d88db5fd4f56a4def3a;
+
+    // ---------------------------------------------------------------------
+    // IMMUTABLE COMMITTEE
+    // ---------------------------------------------------------------------
+    address public immutable nodeA;
+    address public immutable nodeB;
+    address public immutable nodeC;
+    address public immutable nodeD;
+
+    // ---------------------------------------------------------------------
+    // STORAGE
+    // ---------------------------------------------------------------------
+    struct Epoch {
+        bytes32 topic;
