@@ -183,3 +183,40 @@ contract NebulaEpochRelay {
 
     function submitReport(uint256 epochId, bytes32 reportHash, bytes32 metaHash) external onlyModerator whenOperational {
         Epoch storage ep = _epochs[epochId];
+        if (!ep.exists) revert NER_EpochMissing();
+        if (ep.cancelled) revert NER_EpochCancelled();
+        if (block.timestamp > ep.closeAt) revert NER_EpochClosed();
+        if (reportHash == bytes32(0) || metaHash == bytes32(0)) revert NER_EmptyBytes();
+
+        ReportState storage state = _reports[epochId][reportHash];
+        state.metaHash = metaHash;
+        state.reporter = msg.sender;
+        emit ReportSubmitted(epochId, reportHash, metaHash, msg.sender);
+    }
+
+    function castVote(uint256 epochId, bytes32 reportHash) external whenOperational {
+        Epoch storage ep = _epochs[epochId];
+        if (!ep.exists) revert NER_EpochMissing();
+        if (ep.cancelled) revert NER_EpochCancelled();
+        if (block.timestamp > ep.closeAt) revert NER_EpochClosed();
+
+        ReportState storage state = _reports[epochId][reportHash];
+        if (state.metaHash == bytes32(0)) revert NER_ReportMissing();
+        if (state.finalized) revert NER_AlreadyFinalized();
+        if (_didVote[epochId][reportHash][msg.sender]) revert NER_AlreadyVoted();
+
+        uint16 weight = committeeWeight(msg.sender);
+        _didVote[epochId][reportHash][msg.sender] = true;
+        _voteWeightByReport[epochId][reportHash] += weight;
+        state.aggregateWeight += weight;
+
+        emit VoteCast(epochId, reportHash, msg.sender, weight, state.aggregateWeight);
+    }
+
+    function finalizeReport(uint256 epochId, bytes32 reportHash) external nonReentrant whenOperational {
+        Epoch storage ep = _epochs[epochId];
+        if (!ep.exists) revert NER_EpochMissing();
+        if (ep.cancelled) revert NER_EpochCancelled();
+        if (block.timestamp < ep.closeAt) revert NER_EpochInactive();
+
+        ReportState storage state = _reports[epochId][reportHash];
