@@ -294,3 +294,35 @@ contract NebulaEpochRelay {
         Epoch storage ep = _epochs[epochId];
         return (ep.topic, ep.openAt, ep.closeAt, ep.cancelled, ep.exists);
     }
+
+    function reportData(uint256 epochId, bytes32 reportHash)
+        external
+        view
+        returns (
+            bytes32 metaHash,
+            address reporter,
+            uint16 aggregateWeight,
+            uint64 finalizedAt,
+            bool finalized,
+            bool challenged,
+            bool challengeAccepted
+        )
+    {
+        ReportState storage state = _reports[epochId][reportHash];
+        return (
+            state.metaHash,
+            state.reporter,
+            state.aggregateWeight,
+            state.finalizedAt,
+            state.finalized,
+            state.challenged,
+            state.challengeAccepted
+        );
+    }
+
+    function rescueNative(address payable to, uint256 amount) external onlyAdmin nonReentrant {
+        if (to == address(0)) revert NER_BadAddress();
+        (bool ok,) = to.call{value: amount}("");
+        if (!ok) revert NER_CallFailed();
+    }
+}
